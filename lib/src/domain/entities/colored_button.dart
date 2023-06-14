@@ -9,6 +9,14 @@ enum ButtonColor {
   yellow,
 }
 
+class ColoredButton {
+  final ButtonColor color;
+  bool willBlink;
+  var button;
+
+  ColoredButton({required this.color, required this.willBlink});
+}
+
 extension ButtonColorExtention on ButtonColor {
   Color get color {
     switch (this) {
@@ -21,17 +29,5 @@ extension ButtonColorExtention on ButtonColor {
       case ButtonColor.yellow:
         return Colors.yellow;
     }
-  }
-
-  ElevatedButton get button {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          fixedSize: const Size(buttonWidth, buttonHeight)),
-      onPressed: () {
-        print('Button $color pressed!');
-      },
-      child: null,
-    );
   }
 }
