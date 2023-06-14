@@ -1,10 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/constants.dart';
 import '../../../domain/entities/colored_button.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({super.key});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -12,6 +14,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int currentIndex = 0;
+  bool isCorrectPlay = true;
+  bool isPlaying = false;
+  List<ColoredButton> simonsButtons = [];
+  var playedButtons = [];
   final greenButton = ColoredButton(color: ButtonColor.green, willBlink: false);
 
   final yellowButton =
@@ -23,7 +29,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    double delay = 0.5;
     return ClipRect(
       clipBehavior: Clip.antiAlias,
       child: Stack(children: [
@@ -37,10 +42,10 @@ class _HomePageState extends State<HomePage> {
                   Radius.circular(80),
                 ),
                 color: Colors.black),
-            child: const Center(
+            child: Center(
               child: Text(
-                'Simon',
-                style: TextStyle(
+                '${simonsButtons.length}',
+                style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 18),
@@ -53,13 +58,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Container _buildButtonContainer() {
-    final buttons = [
-      greenButton,
-      redButton,
-      yellowButton,
-      blueButton,
-      redButton
-    ];
+    var buttons = [greenButton, redButton, yellowButton, blueButton];
     return Container(
       color: Colors.black,
       child: Column(
@@ -84,59 +83,92 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
-              onPressed: currentIndex != 0
-                  ? null
-                  : () => _mapThroughButtonList(buttons),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      currentIndex != 0 ? Colors.black : Colors.white),
-              child: const Text(
-                'PLAY',
-                style: TextStyle(color: Colors.black, fontSize: 16),
-              ))
+          _buildPlayButton(buttons)
         ],
       ),
     );
   }
 
+  ElevatedButton _buildPlayButton(List<ColoredButton> buttons) {
+    return ElevatedButton(
+        onPressed: currentIndex != 0
+            ? null
+            : () {
+                isPlaying = true;
+                simonsButtons = [];
+                simonsButtons
+                    .add(buttons[Random().nextInt(buttons.length - 1)]);
+                Future.delayed(const Duration(milliseconds: 250), () {
+                  _mapThroughButtonList();
+                });
+              },
+        style: ElevatedButton.styleFrom(
+            backgroundColor: isPlaying ? Colors.black : Colors.white),
+        child: const Text(
+          'PLAY',
+          style: TextStyle(color: Colors.black, fontSize: 16),
+        ));
+  }
+
   ElevatedButton _buildColoredButton(ColoredButton button) {
     final color = button.color.color;
     final fadedColor = button.color.color.withAlpha(150);
+    var buttons = [greenButton, redButton, yellowButton, blueButton];
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
           backgroundColor: button.willBlink ? color : fadedColor,
           fixedSize: const Size(buttonWidth, buttonHeight)),
-      onPressed: () {},
+      onPressed: () {
+        playedButtons.add(button);
+        setState(() {
+          if (simonsButtons[playedButtons.length - 1] != button) {
+            print('Game over');
+            isPlaying = false;
+            currentIndex = 0;
+            playedButtons = [];
+          } else if (simonsButtons.length == playedButtons.length) {
+            simonsButtons[playedButtons.length - 1].willBlink = false;
+            simonsButtons.add(buttons[Random().nextInt(buttons.length - 1)]);
+            currentIndex = 0;
+            playedButtons = [];
+            print('Add new button!');
+            Future.delayed(const Duration(milliseconds: 500), () {
+              _mapThroughButtonList();
+            });
+          } else {
+            print('Correct!');
+          }
+        });
+      },
       child: null,
     );
   }
 
-  void _mapThroughButtonList(List<ColoredButton> buttons) {
+  void _mapThroughButtonList() {
     // If currentIndex >= 1, turn off previous button
     if (currentIndex >= 1) {
-      buttons[currentIndex - 1].willBlink = false;
+      simonsButtons[currentIndex - 1].willBlink = false;
     }
     // Turn on current button
-    buttons[currentIndex].willBlink = true;
+    simonsButtons[currentIndex].willBlink = true;
     setState(() {
       // After 1 second turn off
-      _updateColoredButtonState(buttons[currentIndex]);
+      _updateColoredButtonState(simonsButtons[currentIndex]);
     });
 
     // Turn on next button, if end of list terminate
-    Future.delayed(Duration(milliseconds: currentIndex == 0 ? 500 : 1000), () {
-      if (currentIndex < buttons.length) {
-        _mapThroughButtonList(buttons);
+    Future.delayed(Duration(milliseconds: currentIndex == 0 ? 500 : 750), () {
+      if (currentIndex < simonsButtons.length - 1) {
         currentIndex++;
-      } else if (currentIndex >= buttons.length) {
+        _mapThroughButtonList();
+      } else if (currentIndex >= simonsButtons.length) {
         currentIndex = 0;
       }
     });
   }
 
-  Future<void> _updateColoredButtonState(ColoredButton button) {
-    return Future.delayed(const Duration(seconds: 1), () {
+  _updateColoredButtonState(ColoredButton button) {
+    return Future.delayed(const Duration(milliseconds: 250), () {
       setState(() {
         button.willBlink = false;
       });
